@@ -36,16 +36,16 @@
     <!-- Navigation -->
     <nav class="bg-slate-900/90 border-b border-slate-800 sticky top-14 z-30 overflow-x-auto">
         <div class="max-w-7xl mx-auto flex space-x-1 px-4 min-w-max">
-            <button onclick="switchTab('tab-leeds')" class="tab-btn active px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
+            <button onclick="switchTab('tab-leeds', this)" class="tab-btn active px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
                 <i class="fa-solid fa-table-cells"></i><span>Leeds Grid</span>
             </button>
-            <button onclick="switchTab('tab-tree')" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
+            <button onclick="switchTab('tab-tree', this)" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
                 <i class="fa-solid fa-sitemap"></i><span>Pedigree Tree</span>
             </button>
-            <button onclick="switchTab('tab-ai')" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
+            <button onclick="switchTab('tab-ai', this)" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
                 <i class="fa-solid fa-bolt text-yellow-400"></i><span>AI Assistant</span>
             </button>
-            <button onclick="switchTab('tab-report')" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
+            <button onclick="switchTab('tab-report', this)" class="tab-btn px-4 py-3 text-sm font-medium text-slate-400 flex items-center space-x-2">
                 <i class="fa-solid fa-file-contract"></i><span>GPS Report</span>
             </button>
         </div>
@@ -168,12 +168,22 @@
 
     <!-- Logic Script -->
     <script>
-        function switchTab(tabId) {
+        function switchTab(tabId, btnElement) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.remove('hidden');
-            if (event && event.currentTarget) {
-                event.currentTarget.classList.add('active');
+            
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.remove('hidden');
+            }
+
+            if (btnElement && btnElement.classList) {
+                btnElement.classList.add('active');
+            } else {
+                const matchingBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
+                if (matchingBtn && matchingBtn.classList) {
+                    matchingBtn.classList.add('active');
+                }
             }
         }
 
