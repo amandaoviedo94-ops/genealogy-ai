@@ -56,13 +56,25 @@
 
         <!-- Leeds Grid Tab -->
         <section id="tab-leeds" class="tab-content space-y-4">
-            <div class="glass p-4 rounded-xl flex justify-between items-center flex-wrap gap-2">
+            <div class="glass p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Leeds Cluster Matrix</h2>
-                    <p class="text-xs text-slate-400 mt-1">Upload a CSV or ZIP archive to populate your match clusters.</p>
+                    <p class="text-xs text-slate-400 mt-1">Filter, inspect, and export your DNA match clusters.</p>
                 </div>
-                <span id="leeds-count" class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">2 Demo Matches Loaded</span>
+                <div class="flex items-center gap-2">
+                    <span id="leeds-count" class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20">2 Matches Loaded</span>
+                    <button onclick="exportLeedsCSV()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+                        <i class="fa-solid fa-download mr-1"></i> Export CSV
+                    </button>
+                </div>
             </div>
+
+            <!-- Leeds Search Bar -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="leeds-search" oninput="filterLeedsGrid()" placeholder="Search matches by name or cM range..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+            </div>
+
             <div class="overflow-x-auto glass rounded-xl p-4">
                 <table class="w-full text-xs text-left">
                     <thead class="bg-slate-800 text-slate-300 uppercase text-[10px]">
@@ -99,17 +111,27 @@
 
         <!-- Pedigree Tree Tab -->
         <section id="tab-tree" class="tab-content hidden space-y-4">
-            <div class="glass p-4 rounded-xl flex justify-between items-center flex-wrap gap-2">
+            <div class="glass p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div>
-                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-sitemap text-indigo-400 mr-2"></i>Pedigree Tree Strategy</h2>
-                    <p class="text-xs text-slate-400 mt-1">Upload a GEDCOM or ZIP file to populate individuals from your tree.</p>
+                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-sitemap text-indigo-400 mr-2"></i>Pedigree Tree Lineage</h2>
+                    <p class="text-xs text-slate-400 mt-1">Explore parsed family relationships (parents, spouses, and children).</p>
                 </div>
+                <button onclick="exportPedigreeCSV()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+                    <i class="fa-solid fa-download mr-1"></i> Export Tree CSV
+                </button>
             </div>
+
+            <!-- Pedigree Search Bar -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                <input type="text" id="pedigree-search" oninput="filterPedigreeTree()" placeholder="Search tree by individual name, ID, or relative..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            </div>
+
             <div id="pedigree-list" class="space-y-3">
                 <div class="p-4 bg-slate-800/80 rounded-lg border border-indigo-500/30">
                     <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Target Tester Recommendation</span>
                     <h3 class="font-bold text-sm text-slate-200 mt-1">2nd Cousin (Descendant of James Miller)</h3>
-                    <p class="text-xs text-slate-400 mt-1">Testing a child of Cousin Arthur will resolve the 3rd Great-Grandfather gap.</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload a GEDCOM file to parse parents, spouses, and children into lineage cards.</p>
                 </div>
             </div>
         </section>
@@ -166,24 +188,26 @@
         </div>
     </div>
 
-    <!-- Logic Script -->
+    <!-- Application Script -->
     <script>
+        let globalLeedsData = [
+            { name: "Cousin Sarah M.", cm: "245", cluster: 1 },
+            { name: "Robert H.", cm: "180", cluster: 2 }
+        ];
+        let globalPedigreeData = [];
+
         function switchTab(tabId, btnElement) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
             const targetTab = document.getElementById(tabId);
-            if (targetTab) {
-                targetTab.classList.remove('hidden');
-            }
+            if (targetTab) targetTab.classList.remove('hidden');
 
             if (btnElement && btnElement.classList) {
                 btnElement.classList.add('active');
             } else {
                 const matchingBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
-                if (matchingBtn && matchingBtn.classList) {
-                    matchingBtn.classList.add('active');
-                }
+                if (matchingBtn && matchingBtn.classList) matchingBtn.classList.add('active');
             }
         }
 
@@ -249,32 +273,40 @@
             }
         }
 
+        /* --- LEEDS GRID LOGIC & EXPORT --- */
         function parseCSV(text) {
             const lines = text.trim().split('\n').filter(line => line.trim() !== '');
             if (lines.length === 0) return;
 
-            const tbody = document.getElementById('leeds-tbody');
-            tbody.innerHTML = '';
-
+            globalLeedsData = [];
             const startIndex = (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('cm')) ? 1 : 0;
-            let matchCount = 0;
 
             for (let i = startIndex; i < lines.length; i++) {
                 const parts = lines[i].split(',').map(p => p.replace(/"/g, '').trim());
                 if (parts.length < 2) continue;
 
-                matchCount++;
                 const name = parts[0] || 'Unknown Match';
                 const cm = parts[1] || '0';
                 const assignedCluster = parts[2] ? parseInt(parts[2]) : ((i % 4) + 1);
 
+                globalLeedsData.push({ name, cm, cluster: assignedCluster });
+            }
+
+            renderLeedsGrid(globalLeedsData);
+        }
+
+        function renderLeedsGrid(data) {
+            const tbody = document.getElementById('leeds-tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.className = 'border-b border-slate-800 hover:bg-slate-800/50';
 
                 const colors = {1: 'bg-red-500', 2: 'bg-blue-500', 3: 'bg-emerald-500', 4: 'bg-amber-500'};
                 let clusterDots = '';
                 for (let c = 1; c <= 4; c++) {
-                    if (assignedCluster === c) {
+                    if (item.cluster === c) {
                         clusterDots += `<td class="p-3 text-center"><span class="inline-block w-3 h-3 rounded-full ${colors[c]}"></span></td>`;
                     } else {
                         clusterDots += `<td class="p-3 text-center text-slate-600">-</td>`;
@@ -282,53 +314,180 @@
                 }
 
                 tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-200">${name}</td>
-                    <td class="p-3 text-slate-300">${cm} cM</td>
+                    <td class="p-3 font-semibold text-slate-200">${item.name}</td>
+                    <td class="p-3 text-slate-300">${item.cm} cM</td>
                     ${clusterDots}
                 `;
                 tbody.appendChild(tr);
-            }
+            });
 
-            document.getElementById('leeds-count').innerText = `${matchCount} Matches Imported`;
+            document.getElementById('leeds-count').innerText = `${data.length} Matches Loaded`;
         }
 
+        function filterLeedsGrid() {
+            const query = document.getElementById('leeds-search').value.toLowerCase();
+            const filtered = globalLeedsData.filter(m => 
+                m.name.toLowerCase().includes(query) || m.cm.toString().includes(query)
+            );
+            renderLeedsGrid(filtered);
+        }
+
+        function exportLeedsCSV() {
+            if (!globalLeedsData || globalLeedsData.length === 0) {
+                alert('No Leeds match data available to export.');
+                return;
+            }
+            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Cluster\n';
+            globalLeedsData.forEach(row => {
+                csvContent += `"${row.name}",${row.cm},${row.cluster}\n`;
+            });
+            downloadCSV(csvContent, 'leeds_clusters.csv');
+        }
+
+        /* --- GEDCOM RELATIONSHIP PARSING & EXPORT --- */
         function parseGEDCOM(text) {
             const lines = text.split('\n');
-            const individuals = [];
-            let currentIndi = null;
+            const indis = {};
+            const fams = {};
+            let currentObj = null;
+            let currentType = null;
 
             lines.forEach(line => {
                 const trimmed = line.trim();
-                if (trimmed.startsWith('0 @I') && trimmed.includes('INDI')) {
-                    if (currentIndi && currentIndi.name) individuals.push(currentIndi);
-                    currentIndi = { id: trimmed.split(' ')[1], name: '' };
-                } else if (trimmed.startsWith('1 NAME') && currentIndi) {
-                    let name = trimmed.replace('1 NAME', '').replace(/\//g, '').trim();
-                    currentIndi.name = name;
+                if (!trimmed) return;
+                const parts = trimmed.split(' ');
+                const level = parts[0];
+
+                if (level === '0') {
+                    if (parts[1] && parts[1].startsWith('@I')) {
+                        const id = parts[1].replace(/@/g, '');
+                        currentObj = { id, name: '', famc: null, fams: [] };
+                        indis[id] = currentObj;
+                        currentType = 'INDI';
+                    } else if (parts[1] && parts[1].startsWith('@F')) {
+                        const id = parts[1].replace(/@/g, '');
+                        currentObj = { id, husb: null, wife: null, chil: [] };
+                        fams[id] = currentObj;
+                        currentType = 'FAM';
+                    } else {
+                        currentObj = null;
+                        currentType = null;
+                    }
+                } else if (currentObj) {
+                    if (currentType === 'INDI') {
+                        if (trimmed.startsWith('1 NAME')) {
+                            currentObj.name = trimmed.replace('1 NAME', '').replace(/\//g, '').trim();
+                        } else if (trimmed.startsWith('1 FAMC')) {
+                            currentObj.famc = parts[2] ? parts[2].replace(/@/g, '') : null;
+                        } else if (trimmed.startsWith('1 FAMS')) {
+                            if (parts[2]) currentObj.fams.push(parts[2].replace(/@/g, ''));
+                        }
+                    } else if (currentType === 'FAM') {
+                        if (trimmed.startsWith('1 HUSB')) {
+                            currentObj.husb = parts[2] ? parts[2].replace(/@/g, '') : null;
+                        } else if (trimmed.startsWith('1 WIFE')) {
+                            currentObj.wife = parts[2] ? parts[2].replace(/@/g, '') : null;
+                        } else if (trimmed.startsWith('1 CHIL')) {
+                            if (parts[2]) currentObj.chil.push(parts[2].replace(/@/g, ''));
+                        }
+                    }
                 }
             });
-            if (currentIndi && currentIndi.name) individuals.push(currentIndi);
 
+            // Link parent/spouse/child names
+            globalPedigreeData = Object.values(indis).map(indi => {
+                let parents = [];
+                if (indi.famc && fams[indi.famc]) {
+                    const fam = fams[indi.famc];
+                    if (fam.husb && indis[fam.husb]) parents.push(indis[fam.husb].name || fam.husb);
+                    if (fam.wife && indis[fam.wife]) parents.push(indis[fam.wife].name || fam.wife);
+                }
+
+                let children = [];
+                let spouses = [];
+                indi.fams.forEach(fId => {
+                    if (fams[fId]) {
+                        const fam = fams[fId];
+                        if (indi.id === fam.husb && fam.wife && indis[fam.wife]) spouses.push(indis[fam.wife].name);
+                        if (indi.id === fam.wife && fam.husb && indis[fam.husb]) spouses.push(indis[fam.husb].name);
+                        fam.chil.forEach(cId => {
+                            if (indis[cId]) children.push(indis[cId].name || cId);
+                        });
+                    }
+                });
+
+                return {
+                    id: indi.id,
+                    name: indi.name || 'Unnamed Individual',
+                    parents: parents.length ? parents.join(', ') : 'Unknown',
+                    spouses: spouses.length ? spouses.join(', ') : 'None',
+                    children: children.length ? children.join(', ') : 'None'
+                };
+            });
+
+            renderPedigreeTree(globalPedigreeData);
+        }
+
+        function renderPedigreeTree(list) {
             const container = document.getElementById('pedigree-list');
             container.innerHTML = '';
 
-            if (individuals.length === 0) {
-                container.innerHTML = `<p class="text-xs text-amber-400 p-3 bg-slate-900 rounded">No individual records found in GEDCOM file.</p>`;
+            if (list.length === 0) {
+                container.innerHTML = `<p class="text-xs text-amber-400 p-3 bg-slate-900 rounded">No tree records found matching your query.</p>`;
                 return;
             }
 
-            individuals.forEach(indi => {
+            list.forEach(indi => {
                 const div = document.createElement('div');
-                div.className = 'p-3 bg-slate-800/80 rounded-lg border border-indigo-500/30 flex justify-between items-center';
+                div.className = 'p-4 bg-slate-800/80 rounded-lg border border-indigo-500/30 space-y-2';
                 div.innerHTML = `
-                    <div>
-                        <h4 class="font-bold text-sm text-slate-200">${indi.name}</h4>
-                        <span class="text-[10px] text-indigo-400 uppercase font-mono">ID: ${indi.id}</span>
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-100">${indi.name}</h4>
+                            <span class="text-[10px] text-indigo-400 uppercase font-mono">ID: ${indi.id}</span>
+                        </div>
+                        <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded text-[10px] font-semibold border border-indigo-500/20">GEDCOM Record</span>
                     </div>
-                    <span class="px-2 py-1 bg-indigo-500/10 text-indigo-300 rounded text-[10px] font-semibold border border-indigo-500/20">GEDCOM Record</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-700/50">
+                        <div><span class="text-slate-400 text-[10px] block font-semibold uppercase">Parents</span> ${indi.parents}</div>
+                        <div><span class="text-slate-400 text-[10px] block font-semibold uppercase">Spouse</span> ${indi.spouses}</div>
+                        <div class="sm:col-span-2"><span class="text-slate-400 text-[10px] block font-semibold uppercase">Children</span> ${indi.children}</div>
+                    </div>
                 `;
                 container.appendChild(div);
             });
+        }
+
+        function filterPedigreeTree() {
+            const query = document.getElementById('pedigree-search').value.toLowerCase();
+            const filtered = globalPedigreeData.filter(i => 
+                i.name.toLowerCase().includes(query) || 
+                i.id.toLowerCase().includes(query) ||
+                i.parents.toLowerCase().includes(query)
+            );
+            renderPedigreeTree(filtered);
+        }
+
+        function exportPedigreeCSV() {
+            if (!globalPedigreeData || globalPedigreeData.length === 0) {
+                alert('No pedigree data available to export.');
+                return;
+            }
+            let csvContent = 'data:text/csv;charset=utf-8,ID,Name,Parents,Spouses,Children\n';
+            globalPedigreeData.forEach(row => {
+                csvContent += `"${row.id}","${row.name}","${row.parents}","${row.spouses}","${row.children}"\n`;
+            });
+            downloadCSV(csvContent, 'pedigree_tree.csv');
+        }
+
+        function downloadCSV(csvContent, filename) {
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement('a');
+            link.setAttribute('href', encodedUri);
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>
