@@ -169,7 +169,7 @@
                 <h3 class="font-bold text-slate-100">Upload Data File</h3>
                 <button onclick="toggleModal('upload-modal')" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-xs text-slate-400">Select a <strong>.csv</strong> (DNA matches), <strong>.ged</strong> (Family tree), or <strong>.zip</strong> containing both.</p>
+            <p class="text-xs text-slate-400">Select a <strong>.csv</strong>, <strong>.txt</strong>, <strong>.ged</strong>, or <strong>.zip</strong> file containing your DNA matches or tree.</p>
             <input type="file" id="file-input" accept=".ged,.csv,.txt,.tsv,.zip" class="w-full text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
             <button onclick="processUploadedFile()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 font-bold text-xs rounded-lg text-white">Process File</button>
         </div>
@@ -242,7 +242,7 @@
                         if (entryName.endsWith('.csv') || entryName.endsWith('.txt') || entryName.endsWith('.tsv')) {
                             const text = await zipEntry.async('text');
                             if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                                alert('Note: This file contains raw genome DNA data. Leeds Grid requires a DNA Match list export from Ancestry, MyHeritage, GEDmatch, 23andMe, or FTDNA.');
+                                alert('Note: This file is a Raw DNA file (chromosome markers). Ancestry raw DNA files do not contain match lists. Please upload a match list file or copy-pasted match text.');
                             } else {
                                 parseCSV(text);
                                 foundCsv = true;
@@ -266,7 +266,7 @@
                         alert('GEDCOM tree imported successfully!');
                         switchTab('tab-tree');
                     } else {
-                        alert('No valid .csv, .tsv, or .ged files found inside this ZIP archive.');
+                        alert('No valid match list or .ged files found inside this ZIP archive.');
                     }
                 }).catch(function(err) {
                     alert('Error reading zip archive: ' + err.message);
@@ -274,7 +274,12 @@
             } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.tsv')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    parseCSV(e.target.result);
+                    const text = e.target.result;
+                    if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
+                        alert('This file is an Ancestry Raw DNA genome file (chromosome SNP markers). Ancestry raw DNA files do not contain relative match lists. Leeds Grid requires a match list text file or copy-pasted match text.');
+                        return;
+                    }
+                    parseCSV(text);
                     toggleModal('upload-modal');
                     switchTab('tab-leeds');
                     if (globalPedigreeData.length > 0) runTriangulation();
@@ -290,100 +295,131 @@
                 };
                 reader.readAsText(file);
             } else {
-                alert('Please upload a valid .csv, .tsv, .ged, or .zip file.');
+                alert('Please upload a valid .csv, .txt, .ged, or .zip file.');
             }
         }
 
-        /* --- UNIVERSAL DNA PARSER (LEEDS GRID) --- */
+        /* --- ANCESTRY TXT & UNIVERSAL CSV PARSER --- */
         function parseCSV(text) {
-            // Remove BOM character if present
             text = text.replace(/^\uFEFF/, '');
             const rawLines = text.split(/\r?\n/).filter(line => line.trim() !== '');
 
             if (rawLines.length === 0) {
-                alert('Uploaded CSV file is empty.');
+                alert('Uploaded text file is empty.');
                 return;
-            }
-
-            // Auto-detect delimiter: comma, tab, or semicolon
-            const firstSample = rawLines.slice(0, 5).join('\n');
-            let delimiter = ',';
-            if ((firstSample.match(/\t/g) || []).length > (firstSample.match(/,/g) || []).length) {
-                delimiter = '\t';
-            } else if ((firstSample.match(/;/g) || []).length > (firstSample.match(/,/g) || []).length) {
-                delimiter = ';';
-            }
-
-            function splitLine(line) {
-                const result = [];
-                let cur = '';
-                let inQuotes = false;
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"' || char === "'") {
-                        inQuotes = !inQuotes;
-                    } else if (char === delimiter && !inQuotes) {
-                        result.push(cur.trim());
-                        cur = '';
-                    } else {
-                        cur += char;
-                    }
-                }
-                result.push(cur.trim());
-                return result;
-            }
-
-            // Locate header row within first 10 lines
-            let headerIdx = -1;
-            let nameIdx = -1;
-            let cmIdx = -1;
-
-            const nameKeywords = ['name', 'match', 'person', 'individual', 'displayname', 'full name', 'kit', 'relative', 'user'];
-            const cmKeywords = ['cm', 'centimorgan', 'centimorgans', 'shared cm', 'sharedcm', 'total cm', 'totalcm', 'segment', 'shared centimorgans'];
-
-            for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
-                const parts = splitLine(rawLines[i]).map(p => p.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim());
-                const foundName = parts.findIndex(p => nameKeywords.some(k => p.includes(k)));
-                const foundCm = parts.findIndex(p => cmKeywords.some(k => p.includes(k)));
-
-                if (foundName !== -1 || foundCm !== -1) {
-                    headerIdx = i;
-                    nameIdx = foundName !== -1 ? foundName : 0;
-                    cmIdx = foundCm !== -1 ? foundCm : 1;
-                    break;
-                }
-            }
-
-            // Fallback if no header keyword matches
-            if (headerIdx === -1) {
-                headerIdx = 0;
-                nameIdx = 0;
-                cmIdx = 1;
             }
 
             globalLeedsData = [];
 
-            for (let i = headerIdx + 1; i < rawLines.length; i++) {
-                const parts = splitLine(rawLines[i]);
-                if (parts.length < 1) continue;
+            // Pattern A: Check for Ancestry copy-paste text format (scanning for "cM" or "centimorgans")
+            let currentName = '';
+            let foundMatchesViaPattern = false;
 
-                const name = parts[nameIdx] ? parts[nameIdx].replace(/["']/g, '').trim() : `Match #${i}`;
-                let rawCm = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
-                let cm = parseFloat(rawCm) || 0;
+            for (let i = 0; i < rawLines.length; i++) {
+                const line = rawLines[i].trim();
+                if (!line) continue;
 
-                // Skip non-numeric header residue or blank rows
-                if (!name || (name.toLowerCase().includes('name') && cm === 0)) continue;
+                const cmMatch = line.match(/(\d+(?:\.\d+)?)\s*(?:cM|centimorgan|centimorgans)/i);
+                if (cmMatch) {
+                    const cm = parseFloat(cmMatch[1]);
+                    let name = currentName;
+                    if (!name) {
+                        name = line.replace(/(\d+(?:\.\d+)?)\s*(?:cM|centimorgan|centimorgans).*/i, '').trim() || `Match #${globalLeedsData.length + 1}`;
+                    }
 
-                globalLeedsData.push({
-                    id: globalLeedsData.length,
-                    name: name,
-                    cm: cm,
-                    clusters: []
-                });
+                    // Avoid duplicate match names
+                    if (name && !name.toLowerCase().includes('shared dna') && !name.toLowerCase().includes('ancestral')) {
+                        globalLeedsData.push({
+                            id: globalLeedsData.length,
+                            name: name,
+                            cm: cm,
+                            clusters: []
+                        });
+                        foundMatchesViaPattern = true;
+                    }
+                    currentName = '';
+                } else {
+                    if (!line.toLowerCase().includes('ancestral') && 
+                        !line.toLowerCase().includes('shared dna') && 
+                        !line.toLowerCase().includes('view match') && 
+                        line.length < 60) {
+                        currentName = line;
+                    }
+                }
+            }
+
+            // Pattern B: Standard CSV/TSV table fallback if Pattern A found no cM matches
+            if (!foundMatchesViaPattern || globalLeedsData.length === 0) {
+                let delimiter = ',';
+                const firstSample = rawLines.slice(0, 5).join('\n');
+                if ((firstSample.match(/\t/g) || []).length > (firstSample.match(/,/g) || []).length) {
+                    delimiter = '\t';
+                } else if ((firstSample.match(/;/g) || []).length > (firstSample.match(/,/g) || []).length) {
+                    delimiter = ';';
+                }
+
+                function splitLine(lineStr) {
+                    const result = [];
+                    let cur = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < lineStr.length; i++) {
+                        const char = lineStr[i];
+                        if (char === '"' || char === "'") {
+                            inQuotes = !inQuotes;
+                        } else if (char === delimiter && !inQuotes) {
+                            result.push(cur.trim());
+                            cur = '';
+                        } else {
+                            cur += char;
+                        }
+                    }
+                    result.push(cur.trim());
+                    return result;
+                }
+
+                let headerIdx = -1;
+                let nameIdx = 0;
+                let cmIdx = 1;
+
+                const nameKeywords = ['name', 'match', 'person', 'individual', 'displayname', 'full name', 'kit', 'relative'];
+                const cmKeywords = ['cm', 'centimorgan', 'centimorgans', 'shared cm', 'total cm', 'segment'];
+
+                for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
+                    const parts = splitLine(rawLines[i]).map(p => p.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim());
+                    const foundName = parts.findIndex(p => nameKeywords.some(k => p.includes(k)));
+                    const foundCm = parts.findIndex(p => cmKeywords.some(k => p.includes(k)));
+
+                    if (foundName !== -1 || foundCm !== -1) {
+                        headerIdx = i;
+                        nameIdx = foundName !== -1 ? foundName : 0;
+                        cmIdx = foundCm !== -1 ? foundCm : 1;
+                        break;
+                    }
+                }
+
+                const startIndex = headerIdx !== -1 ? headerIdx + 1 : 0;
+
+                for (let i = startIndex; i < rawLines.length; i++) {
+                    const parts = splitLine(rawLines[i]);
+                    if (parts.length < 1) continue;
+
+                    const name = parts[nameIdx] ? parts[nameIdx].replace(/["']/g, '').trim() : `Match #${i}`;
+                    let rawCm = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
+                    let cm = parseFloat(rawCm) || 0;
+
+                    if (!name || (name.toLowerCase().includes('name') && cm === 0)) continue;
+
+                    globalLeedsData.push({
+                        id: globalLeedsData.length,
+                        name: name,
+                        cm: cm,
+                        clusters: []
+                    });
+                }
             }
 
             if (globalLeedsData.length === 0) {
-                alert('Could not detect match rows in this CSV file. Please verify it is a DNA Match Export file (from Ancestry, GEDmatch, MyHeritage, or 23andMe).');
+                alert('No match records with cM values found in this text file. Make sure your file contains DNA match names and shared cM amounts.');
                 return;
             }
 
@@ -394,11 +430,9 @@
         function autoClusterLeeds() {
             if (globalLeedsData.length === 0) return;
 
-            // Sort matches descending by cM
             globalLeedsData.sort((a, b) => b.cm - a.cm);
             globalLeedsData.forEach((m, idx) => { m.id = idx; m.clusters = []; });
 
-            // Standard Leeds Method Rules: Focus on 90 cM to 400 cM matches
             let currentCluster = 1;
             for (let i = 0; i < globalLeedsData.length; i++) {
                 const match = globalLeedsData[i];
