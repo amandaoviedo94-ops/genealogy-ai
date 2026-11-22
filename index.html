@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GenealogyAI Proof Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #0f172a; color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
@@ -58,7 +59,7 @@
             <div class="glass p-4 rounded-xl flex justify-between items-center flex-wrap gap-2">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Leeds Cluster Matrix</h2>
-                    <p class="text-xs text-slate-400 mt-1">Upload a CSV file to automatically populate your match clusters.</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload a CSV or ZIP archive to populate your match clusters.</p>
                 </div>
                 <span id="leeds-count" class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20">2 Demo Matches Loaded</span>
             </div>
@@ -101,7 +102,7 @@
             <div class="glass p-4 rounded-xl flex justify-between items-center flex-wrap gap-2">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-sitemap text-indigo-400 mr-2"></i>Pedigree Tree Strategy</h2>
-                    <p class="text-xs text-slate-400 mt-1">Upload a GEDCOM file to populate individuals from your tree.</p>
+                    <p class="text-xs text-slate-400 mt-1">Upload a GEDCOM or ZIP file to populate individuals from your tree.</p>
                 </div>
             </div>
             <div id="pedigree-list" class="space-y-3">
@@ -143,11 +144,11 @@
     <div id="upload-modal" class="fixed inset-0 bg-slate-950/80 z-50 hidden flex items-center justify-center p-4">
         <div class="glass max-w-md w-full p-6 rounded-xl space-y-4">
             <div class="flex justify-between items-center">
-                <h3 class="font-bold text-slate-100">Upload .CSV or .GED File</h3>
+                <h3 class="font-bold text-slate-100">Upload Data File</h3>
                 <button onclick="toggleModal('upload-modal')" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p class="text-xs text-slate-400">Select a DNA match <strong>.csv</strong> file for the Leeds Grid or a <strong>.ged</strong> file for the Pedigree Tree.</p>
-            <input type="file" id="file-input" accept=".ged,.csv" class="w-full text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
+            <p class="text-xs text-slate-400">Select a <strong>.csv</strong>, <strong>.ged</strong>, or <strong>.zip</strong> archive containing your DNA/Tree files.</p>
+            <input type="file" id="file-input" accept=".ged,.csv,.zip" class="w-full text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
             <button onclick="processUploadedFile()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 font-bold text-xs rounded-lg text-white">Process File</button>
         </div>
     </div>
@@ -188,16 +189,45 @@
             }
 
             const file = input.files[0];
-            const reader = new FileReader();
+            const fileName = file.name.toLowerCase();
 
-            if (file.name.toLowerCase().endsWith('.csv')) {
+            if (fileName.endsWith('.zip')) {
+                JSZip.loadAsync(file).then(async function(zip) {
+                    let processed = false;
+                    for (let relativePath in zip.files) {
+                        const zipEntry = zip.files[relativePath];
+                        if (zipEntry.dir) continue;
+                        const entryName = zipEntry.name.toLowerCase();
+                        if (entryName.endsWith('.csv')) {
+                            const text = await zipEntry.async('text');
+                            parseCSV(text);
+                            processed = true;
+                            switchTab('tab-leeds');
+                        } else if (entryName.endsWith('.ged')) {
+                            const text = await zipEntry.async('text');
+                            parseGEDCOM(text);
+                            processed = true;
+                            switchTab('tab-tree');
+                        }
+                    }
+                    if (processed) {
+                        toggleModal('upload-modal');
+                    } else {
+                        alert('No .csv or .ged files found inside this .zip archive.');
+                    }
+                }).catch(function(err) {
+                    alert('Error reading zip archive: ' + err.message);
+                });
+            } else if (fileName.endsWith('.csv')) {
+                const reader = new FileReader();
                 reader.onload = function(e) {
                     parseCSV(e.target.result);
                     toggleModal('upload-modal');
                     switchTab('tab-leeds');
                 };
                 reader.readAsText(file);
-            } else if (file.name.toLowerCase().endsWith('.ged')) {
+            } else if (fileName.endsWith('.ged')) {
+                const reader = new FileReader();
                 reader.onload = function(e) {
                     parseGEDCOM(e.target.result);
                     toggleModal('upload-modal');
@@ -205,7 +235,7 @@
                 };
                 reader.readAsText(file);
             } else {
-                alert('Please upload a valid .csv or .ged file.');
+                alert('Please upload a valid .csv, .ged, or .zip file.');
             }
         }
 
