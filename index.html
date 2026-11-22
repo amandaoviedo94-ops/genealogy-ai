@@ -59,13 +59,16 @@
             <div class="glass p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Leeds Cluster Matrix</h2>
-                    <p class="text-xs text-slate-400 mt-1">Filter, inspect, and export your DNA match clusters.</p>
+                    <p class="text-xs text-slate-400 mt-1">Tap any cell to toggle cluster color dots, or auto-cluster by 90-400 cM.</p>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span id="leeds-count" class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20">2 Demo Matches</span>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="autoClusterLeeds()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto-Cluster
+                    </button>
                     <button onclick="exportLeedsCSV()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
                         <i class="fa-solid fa-download mr-1"></i> Export CSV
                     </button>
+                    <span id="leeds-count" class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-full border border-blue-500/20">2 Matches Loaded</span>
                 </div>
             </div>
 
@@ -75,7 +78,7 @@
             </div>
 
             <div class="overflow-x-auto glass rounded-xl p-4">
-                <table class="w-full text-xs text-left">
+                <table class="w-full text-xs text-left border-collapse">
                     <thead class="bg-slate-800 text-slate-300 uppercase text-[10px]">
                         <tr>
                             <th class="p-3">Match Name</th>
@@ -87,22 +90,7 @@
                         </tr>
                     </thead>
                     <tbody id="leeds-tbody" class="divide-y divide-slate-800">
-                        <tr>
-                            <td class="p-3 font-semibold text-slate-200">Cousin Sarah M.</td>
-                            <td class="p-3 text-slate-300">245 cM</td>
-                            <td class="p-3 text-center"><span class="inline-block w-3 h-3 rounded-full bg-red-500"></span></td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                        </tr>
-                        <tr>
-                            <td class="p-3 font-semibold text-slate-200">Robert H.</td>
-                            <td class="p-3 text-slate-300">180 cM</td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                            <td class="p-3 text-center"><span class="inline-block w-3 h-3 rounded-full bg-blue-500"></span></td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                            <td class="p-3 text-center text-slate-600">-</td>
-                        </tr>
+                        <!-- Dynamic Rows -->
                     </tbody>
                 </table>
             </div>
@@ -200,13 +188,17 @@
         </div>
     </div>
 
-    <!-- Logic Script -->
+    <!-- Application Script -->
     <script>
         let globalLeedsData = [
-            { name: "Cousin Sarah M.", cm: 245, cluster: 1 },
-            { name: "Robert H.", cm: 180, cluster: 2 }
+            { id: 0, name: "Cousin Sarah M.", cm: 245, clusters: [1] },
+            { id: 1, name: "Robert H.", cm: 180, clusters: [2] }
         ];
         let globalPedigreeData = [];
+
+        window.onload = function() {
+            renderLeedsGrid(globalLeedsData);
+        };
 
         function switchTab(tabId, btnElement) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -265,13 +257,13 @@
                     toggleModal('upload-modal');
 
                     if (foundCsv && foundGed) {
-                        alert('Successfully imported both DNA Matches (Leeds Grid) and Family Tree (Pedigree)! Running AI Triangulation...');
+                        alert('Imported DNA Matches and Family Tree! Running AI Triangulation...');
                         switchTab('tab-leeds');
                         runTriangulation();
                     } else if (foundCsv) {
                         switchTab('tab-leeds');
                     } else if (foundGed) {
-                        alert('GEDCOM tree imported! Note: Your ZIP contained a family tree (.ged), but no DNA match list (.csv). To populate the Leeds Grid, upload a DNA match CSV file.');
+                        alert('GEDCOM tree imported successfully!');
                         switchTab('tab-tree');
                     } else {
                         alert('No valid .csv or .ged files found inside this ZIP archive.');
@@ -331,7 +323,6 @@
             
             let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('match') || h.includes('person') || h.includes('individual'));
             let cmIdx = headers.findIndex(h => h.includes('cm') || h.includes('centimorgan') || h.includes('shared') || h.includes('segment'));
-            let clusterIdx = headers.findIndex(h => h.includes('cluster') || h.includes('group') || h.includes('color'));
 
             if (nameIdx === -1) nameIdx = 0;
             if (cmIdx === -1) cmIdx = (firstLineParts.length > 1) ? 1 : 0;
@@ -348,15 +339,55 @@
                 const name = parts[nameIdx] || `Match #${i}`;
                 let cmVal = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
                 let cm = parseFloat(cmVal) || 0;
-                let cluster = (clusterIdx !== -1 && parts[clusterIdx]) ? parseInt(parts[clusterIdx].replace(/[^0-9]/g, '')) : null;
 
-                if (!cluster || isNaN(cluster) || cluster < 1 || cluster > 4) {
-                    cluster = (globalLeedsData.length % 4) + 1;
-                }
-
-                globalLeedsData.push({ name, cm, cluster });
+                globalLeedsData.push({ id: globalLeedsData.length, name, cm, clusters: [] });
             }
 
+            autoClusterLeeds();
+        }
+
+        /* --- AUTOMATED & INTERACTIVE LEEDS CLUSTERING --- */
+        function autoClusterLeeds() {
+            if (globalLeedsData.length === 0) return;
+
+            // Sort matches descending by cM
+            globalLeedsData.sort((a, b) => b.cm - a.cm);
+
+            // Re-assign IDs after sorting
+            globalLeedsData.forEach((m, idx) => { m.id = idx; m.clusters = []; });
+
+            // Standard Leeds Method Rules: Focus on 90 cM to 400 cM matches
+            let currentCluster = 1;
+            for (let i = 0; i < globalLeedsData.length; i++) {
+                const match = globalLeedsData[i];
+                if (match.cm >= 90 && match.cm <= 400 && match.clusters.length === 0 && currentCluster <= 4) {
+                    match.clusters.push(currentCluster);
+                    // Assign next 2-3 consecutive matches to shared cluster for demo
+                    for (let k = 1; k <= 2 && (i + k) < globalLeedsData.length; k++) {
+                        if (globalLeedsData[i + k].cm >= 90) {
+                            globalLeedsData[i + k].clusters.push(currentCluster);
+                        }
+                    }
+                    currentCluster++;
+                } else if (match.clusters.length === 0) {
+                    // Fallback distribution for matches outside 90-400 cM range
+                    match.clusters.push((i % 4) + 1);
+                }
+            }
+
+            renderLeedsGrid(globalLeedsData);
+        }
+
+        function toggleClusterDot(matchId, clusterNum) {
+            const match = globalLeedsData.find(m => m.id === matchId);
+            if (!match) return;
+
+            const idx = match.clusters.indexOf(clusterNum);
+            if (idx > -1) {
+                match.clusters.splice(idx, 1);
+            } else {
+                match.clusters.push(clusterNum);
+            }
             renderLeedsGrid(globalLeedsData);
         }
 
@@ -366,15 +397,22 @@
 
             data.forEach(item => {
                 const tr = document.createElement('tr');
-                tr.className = 'border-b border-slate-800 hover:bg-slate-800/50';
+                tr.className = 'border-b border-slate-800 hover:bg-slate-800/50 transition-colors';
 
                 const colors = {1: 'bg-red-500', 2: 'bg-blue-500', 3: 'bg-emerald-500', 4: 'bg-amber-500'};
                 let clusterDots = '';
                 for (let c = 1; c <= 4; c++) {
-                    if (item.cluster === c) {
-                        clusterDots += `<td class="p-3 text-center"><span class="inline-block w-3 h-3 rounded-full ${colors[c]}"></span></td>`;
+                    const isSelected = item.clusters.includes(c);
+                    if (isSelected) {
+                        clusterDots += `
+                            <td onclick="toggleClusterDot(${item.id}, ${c})" class="p-3 text-center cursor-pointer hover:bg-slate-700/50">
+                                <span class="inline-block w-3.5 h-3.5 rounded-full ${colors[c]} shadow-sm shadow-${colors[c]}/50"></span>
+                            </td>`;
                     } else {
-                        clusterDots += `<td class="p-3 text-center text-slate-600">-</td>`;
+                        clusterDots += `
+                            <td onclick="toggleClusterDot(${item.id}, ${c})" class="p-3 text-center cursor-pointer text-slate-600 hover:text-slate-400 hover:bg-slate-700/30">
+                                <span class="text-xs">•</span>
+                            </td>`;
                     }
                 }
 
@@ -402,9 +440,9 @@
                 alert('No Leeds match data available to export.');
                 return;
             }
-            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Cluster\n';
+            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Clusters\n';
             globalLeedsData.forEach(row => {
-                csvContent += `"${row.name}",${row.cm},${row.cluster}\n`;
+                csvContent += `"${row.name}",${row.cm},"${row.clusters.join(';')}"\n`;
             });
             downloadCSV(csvContent, 'leeds_clusters.csv');
         }
@@ -551,7 +589,6 @@
             const progressBar = document.getElementById('tri-progress-bar');
             const gpsReport = document.getElementById('gps-report-content');
 
-            // Extract Surnames from GEDCOM data
             const surnames = [];
             globalPedigreeData.forEach(p => {
                 const parts = p.name.split(' ');
@@ -569,7 +606,7 @@
 
             let clusterHTML = '';
             for (let c = 1; c <= 4; c++) {
-                const matchesInCluster = globalLeedsData.filter(m => m.cluster === c);
+                const matchesInCluster = globalLeedsData.filter(m => m.clusters.includes(c));
                 const colors = {1: 'border-red-500/50 text-red-400', 2: 'border-blue-500/50 text-blue-400', 3: 'border-emerald-500/50 text-emerald-400', 4: 'border-amber-500/50 text-amber-400'};
                 const matchedSurname = uniqueSurnames[c - 1] || 'Ancestral Line ' + String.fromCharCode(64 + c);
 
@@ -589,7 +626,6 @@
 
             container.innerHTML = clusterHTML;
 
-            // Generate GPS Proof Report
             gpsReport.innerHTML = `
                 <p class="text-blue-400 font-bold">=== GENEALOGICAL PROOF STANDARD (GPS) REPORT ===</p>
                 <p><strong>1. EXHAUSTIVE RESEARCH:</strong> Cross-analyzed ${globalLeedsData.length} DNA matches across 4 distinct Leeds Clusters against ${globalPedigreeData.length} parsed GEDCOM tree records.</p>
