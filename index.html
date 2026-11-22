@@ -59,7 +59,7 @@
             <div class="glass p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Leeds Cluster Matrix</h2>
-                    <p class="text-xs text-slate-400 mt-1">Tap any cell to toggle cluster color dots, or auto-cluster by 90-400 cM.</p>
+                    <p class="text-xs text-slate-400 mt-1">Tap any cell to toggle cluster dots, or auto-cluster by 90-400 cM.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="autoClusterLeeds()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white">
@@ -170,7 +170,7 @@
                 <button onclick="toggleModal('upload-modal')" class="text-slate-400 hover:text-slate-200"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <p class="text-xs text-slate-400">Select a <strong>.csv</strong> (DNA matches), <strong>.ged</strong> (Family tree), or <strong>.zip</strong> containing both.</p>
-            <input type="file" id="file-input" accept=".ged,.csv,.zip,.txt" class="w-full text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
+            <input type="file" id="file-input" accept=".ged,.csv,.txt,.tsv,.zip" class="w-full text-xs text-slate-400 bg-slate-800 p-2 rounded border border-slate-700">
             <button onclick="processUploadedFile()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 font-bold text-xs rounded-lg text-white">Process File</button>
         </div>
     </div>
@@ -239,10 +239,10 @@
                         if (zipEntry.dir) continue;
                         const entryName = zipEntry.name.toLowerCase();
 
-                        if (entryName.endsWith('.csv') || entryName.endsWith('.txt')) {
+                        if (entryName.endsWith('.csv') || entryName.endsWith('.txt') || entryName.endsWith('.tsv')) {
                             const text = await zipEntry.async('text');
                             if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                                alert('Note: This ZIP contains raw DNA genome data. Leeds Grid requires a DNA Match list CSV (from Ancestry, MyHeritage, GEDmatch, or 23andMe).');
+                                alert('Note: This file contains raw genome DNA data. Leeds Grid requires a DNA Match list export from Ancestry, MyHeritage, GEDmatch, 23andMe, or FTDNA.');
                             } else {
                                 parseCSV(text);
                                 foundCsv = true;
@@ -266,12 +266,12 @@
                         alert('GEDCOM tree imported successfully!');
                         switchTab('tab-tree');
                     } else {
-                        alert('No valid .csv or .ged files found inside this ZIP archive.');
+                        alert('No valid .csv, .tsv, or .ged files found inside this ZIP archive.');
                     }
                 }).catch(function(err) {
                     alert('Error reading zip archive: ' + err.message);
                 });
-            } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt')) {
+            } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.tsv')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     parseCSV(e.target.result);
@@ -290,16 +290,31 @@
                 };
                 reader.readAsText(file);
             } else {
-                alert('Please upload a valid .csv, .ged, or .zip file.');
+                alert('Please upload a valid .csv, .tsv, .ged, or .zip file.');
             }
         }
 
-        /* --- SMART CSV PARSER (LEEDS GRID) --- */
+        /* --- UNIVERSAL DNA PARSER (LEEDS GRID) --- */
         function parseCSV(text) {
-            const lines = text.trim().split(/\r?\n/).filter(line => line.trim() !== '');
-            if (lines.length === 0) return;
+            // Remove BOM character if present
+            text = text.replace(/^\uFEFF/, '');
+            const rawLines = text.split(/\r?\n/).filter(line => line.trim() !== '');
 
-            function splitCSVLine(line) {
+            if (rawLines.length === 0) {
+                alert('Uploaded CSV file is empty.');
+                return;
+            }
+
+            // Auto-detect delimiter: comma, tab, or semicolon
+            const firstSample = rawLines.slice(0, 5).join('\n');
+            let delimiter = ',';
+            if ((firstSample.match(/\t/g) || []).length > (firstSample.match(/,/g) || []).length) {
+                delimiter = '\t';
+            } else if ((firstSample.match(/;/g) || []).length > (firstSample.match(/,/g) || []).length) {
+                delimiter = ';';
+            }
+
+            function splitLine(line) {
                 const result = [];
                 let cur = '';
                 let inQuotes = false;
@@ -307,7 +322,7 @@
                     const char = line[i];
                     if (char === '"' || char === "'") {
                         inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
+                    } else if (char === delimiter && !inQuotes) {
                         result.push(cur.trim());
                         cur = '';
                     } else {
@@ -318,29 +333,58 @@
                 return result;
             }
 
-            const firstLineParts = splitCSVLine(lines[0]);
-            const headers = firstLineParts.map(h => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-            
-            let nameIdx = headers.findIndex(h => h.includes('name') || h.includes('match') || h.includes('person') || h.includes('individual'));
-            let cmIdx = headers.findIndex(h => h.includes('cm') || h.includes('centimorgan') || h.includes('shared') || h.includes('segment'));
+            // Locate header row within first 10 lines
+            let headerIdx = -1;
+            let nameIdx = -1;
+            let cmIdx = -1;
 
-            if (nameIdx === -1) nameIdx = 0;
-            if (cmIdx === -1) cmIdx = (firstLineParts.length > 1) ? 1 : 0;
+            const nameKeywords = ['name', 'match', 'person', 'individual', 'displayname', 'full name', 'kit', 'relative', 'user'];
+            const cmKeywords = ['cm', 'centimorgan', 'centimorgans', 'shared cm', 'sharedcm', 'total cm', 'totalcm', 'segment', 'shared centimorgans'];
 
-            const hasHeader = (lines[0].toLowerCase().includes('name') || lines[0].toLowerCase().includes('cm') || lines[0].toLowerCase().includes('match'));
-            const startIndex = hasHeader ? 1 : 0;
+            for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
+                const parts = splitLine(rawLines[i]).map(p => p.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim());
+                const foundName = parts.findIndex(p => nameKeywords.some(k => p.includes(k)));
+                const foundCm = parts.findIndex(p => cmKeywords.some(k => p.includes(k)));
+
+                if (foundName !== -1 || foundCm !== -1) {
+                    headerIdx = i;
+                    nameIdx = foundName !== -1 ? foundName : 0;
+                    cmIdx = foundCm !== -1 ? foundCm : 1;
+                    break;
+                }
+            }
+
+            // Fallback if no header keyword matches
+            if (headerIdx === -1) {
+                headerIdx = 0;
+                nameIdx = 0;
+                cmIdx = 1;
+            }
 
             globalLeedsData = [];
 
-            for (let i = startIndex; i < lines.length; i++) {
-                const parts = splitCSVLine(lines[i]);
+            for (let i = headerIdx + 1; i < rawLines.length; i++) {
+                const parts = splitLine(rawLines[i]);
                 if (parts.length < 1) continue;
 
-                const name = parts[nameIdx] || `Match #${i}`;
-                let cmVal = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
-                let cm = parseFloat(cmVal) || 0;
+                const name = parts[nameIdx] ? parts[nameIdx].replace(/["']/g, '').trim() : `Match #${i}`;
+                let rawCm = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
+                let cm = parseFloat(rawCm) || 0;
 
-                globalLeedsData.push({ id: globalLeedsData.length, name, cm, clusters: [] });
+                // Skip non-numeric header residue or blank rows
+                if (!name || (name.toLowerCase().includes('name') && cm === 0)) continue;
+
+                globalLeedsData.push({
+                    id: globalLeedsData.length,
+                    name: name,
+                    cm: cm,
+                    clusters: []
+                });
+            }
+
+            if (globalLeedsData.length === 0) {
+                alert('Could not detect match rows in this CSV file. Please verify it is a DNA Match Export file (from Ancestry, GEDmatch, MyHeritage, or 23andMe).');
+                return;
             }
 
             autoClusterLeeds();
@@ -352,8 +396,6 @@
 
             // Sort matches descending by cM
             globalLeedsData.sort((a, b) => b.cm - a.cm);
-
-            // Re-assign IDs after sorting
             globalLeedsData.forEach((m, idx) => { m.id = idx; m.clusters = []; });
 
             // Standard Leeds Method Rules: Focus on 90 cM to 400 cM matches
@@ -362,7 +404,6 @@
                 const match = globalLeedsData[i];
                 if (match.cm >= 90 && match.cm <= 400 && match.clusters.length === 0 && currentCluster <= 4) {
                     match.clusters.push(currentCluster);
-                    // Assign next 2-3 consecutive matches to shared cluster for demo
                     for (let k = 1; k <= 2 && (i + k) < globalLeedsData.length; k++) {
                         if (globalLeedsData[i + k].cm >= 90) {
                             globalLeedsData[i + k].clusters.push(currentCluster);
@@ -370,7 +411,6 @@
                     }
                     currentCluster++;
                 } else if (match.clusters.length === 0) {
-                    // Fallback distribution for matches outside 90-400 cM range
                     match.clusters.push((i % 4) + 1);
                 }
             }
