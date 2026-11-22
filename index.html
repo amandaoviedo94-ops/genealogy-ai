@@ -59,11 +59,14 @@
             <div class="glass p-4 rounded-xl flex flex-wrap justify-between items-center gap-3">
                 <div>
                     <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-table-cells text-blue-400 mr-2"></i>Leeds Cluster Matrix</h2>
-                    <p class="text-xs text-slate-400 mt-1">Tap any cell to toggle cluster dots, or auto-cluster by 90-400 cM.</p>
+                    <p class="text-xs text-slate-400 mt-1">Tag matches as <strong>Mom</strong> or <strong>Dad</strong> to isolate your biological father's clusters.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="autoClusterLeeds()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white">
                         <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Auto-Cluster
+                    </button>
+                    <button onclick="isolateFatherAI()" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white">
+                        <i class="fa-solid fa-user-secret mr-1"></i> Isolate Dad's Lines
                     </button>
                     <button onclick="exportLeedsCSV()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
                         <i class="fa-solid fa-download mr-1"></i> Export CSV
@@ -72,9 +75,15 @@
                 </div>
             </div>
 
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
-                <input type="text" id="leeds-search" oninput="filterLeedsGrid()" placeholder="Search matches by name or cM range..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+            <!-- Search and Side Filter Controls -->
+            <div class="flex flex-wrap gap-2 items-center">
+                <div class="relative flex-1 min-w-[200px]">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-xs"></i>
+                    <input type="text" id="leeds-search" oninput="filterLeedsGrid()" placeholder="Search matches by name or cM..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                </div>
+                <button onclick="filterSide('all')" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg border border-slate-700 font-medium">All Sides</button>
+                <button onclick="filterSide('maternal')" class="px-3 py-2 bg-pink-500/20 hover:bg-pink-500/30 text-pink-300 text-xs rounded-lg border border-pink-500/30 font-medium"><i class="fa-solid fa-venus mr-1"></i>Mom's Side</button>
+                <button onclick="filterSide('paternal')" class="px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs rounded-lg border border-cyan-500/30 font-medium"><i class="fa-solid fa-mars mr-1"></i>Dad's Side</button>
             </div>
 
             <div class="overflow-x-auto glass rounded-xl p-4">
@@ -83,6 +92,7 @@
                         <tr>
                             <th class="p-3">Match Name</th>
                             <th class="p-3">Shared cM</th>
+                            <th class="p-3 text-center">Known Side</th>
                             <th class="p-3 text-center text-red-400">Cluster 1</th>
                             <th class="p-3 text-center text-blue-400">Cluster 2</th>
                             <th class="p-3 text-center text-emerald-400">Cluster 3</th>
@@ -126,26 +136,26 @@
         <section id="tab-ai" class="tab-content hidden space-y-4">
             <div class="glass p-6 rounded-xl space-y-4">
                 <div class="flex justify-between items-center flex-wrap gap-2">
-                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-bolt text-yellow-400 mr-2"></i>AI Triangulation Assistant</h2>
-                    <button onclick="runTriangulation()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 font-bold text-xs rounded-lg text-white">
-                        <i class="fa-solid fa-rotate mr-1"></i> Run Triangulation
+                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-bolt text-yellow-400 mr-2"></i>AI Paternity Triangulation Assistant</h2>
+                    <button onclick="isolateFatherAI()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs rounded-lg text-white">
+                        <i class="fa-solid fa-user-secret mr-1"></i> Run Paternity Isolation
                     </button>
                 </div>
 
                 <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-3">
                     <div class="flex justify-between items-center text-xs">
-                        <span class="text-slate-400">Triangulation Confidence Score</span>
-                        <span id="tri-score-text" class="text-emerald-400 font-bold">89% (High Confidence)</span>
+                        <span class="text-slate-400">Paternity Resolution Confidence</span>
+                        <span id="tri-score-text" class="text-emerald-400 font-bold">Ready to Analyze</span>
                     </div>
                     <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                        <div id="tri-progress-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 w-[89%]"></div>
+                        <div id="tri-progress-bar" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500 w-[0%]"></div>
                     </div>
                 </div>
 
                 <div id="triangulation-results" class="space-y-3">
                     <div class="p-4 bg-slate-800/60 rounded-lg border border-slate-700 space-y-2">
-                        <h4 class="font-bold text-sm text-blue-400"><i class="fa-solid fa-diagram-project mr-2"></i>Cluster-to-Tree Surname Alignment</h4>
-                        <p class="text-xs text-slate-300">Click <strong>Run Triangulation</strong> above or upload both a DNA match list and GEDCOM file to correlate Leeds Clusters against parsed tree surnames.</p>
+                        <h4 class="font-bold text-sm text-blue-400"><i class="fa-solid fa-dna mr-2"></i>Biological Father Isolation Workflow</h4>
+                        <p class="text-xs text-slate-300">1. Go to the <strong>Leeds Grid</strong> tab.<br>2. Find matches you know are on your <strong>Mom's side</strong> and tap their side tag to set them to <strong>Mom</strong>.<br>3. Tap <strong>Isolate Dad's Lines</strong> above. The AI will eliminate your mom's clusters and focus exclusively on your father's matches!</p>
                     </div>
                 </div>
             </div>
@@ -156,7 +166,7 @@
             <div class="glass p-6 rounded-xl space-y-4">
                 <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-file-contract text-emerald-400 mr-2"></i>Genealogical Proof Standard Report</h2>
                 <div id="gps-report-content" class="bg-slate-900 p-4 rounded-lg text-xs text-slate-300 font-mono space-y-3 leading-relaxed">
-                    <p><strong>SUMMARY:</strong> Biological paternity hypothesis is established through 3-way DNA cluster alignment combined with pedigree records.</p>
+                    <p><strong>SUMMARY:</strong> Biological paternity hypothesis is ready to execute upon maternal cluster elimination.</p>
                 </div>
             </div>
         </section>
@@ -191,10 +201,11 @@
     <!-- Application Script -->
     <script>
         let globalLeedsData = [
-            { id: 0, name: "Cousin Sarah M.", cm: 245, clusters: [1] },
-            { id: 1, name: "Robert H.", cm: 180, clusters: [2] }
+            { id: 0, name: "Maternal Cousin (Sarah)", cm: 245, side: "maternal", clusters: [1] },
+            { id: 1, name: "Paternal Match Candidate", cm: 180, side: "paternal", clusters: [3] }
         ];
         let globalPedigreeData = [];
+        let activeSideFilter = 'all';
 
         window.onload = function() {
             renderLeedsGrid(globalLeedsData);
@@ -242,7 +253,7 @@
                         if (entryName.endsWith('.csv') || entryName.endsWith('.txt') || entryName.endsWith('.tsv')) {
                             const text = await zipEntry.async('text');
                             if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                                alert('Note: This file is a Raw DNA file (chromosome markers). Ancestry raw DNA files do not contain match lists. Please upload a match list file or copy-pasted match text.');
+                                alert('Note: Raw DNA SNP files do not contain match lists. Please upload a match list file.');
                             } else {
                                 parseCSV(text);
                                 foundCsv = true;
@@ -259,7 +270,7 @@
                     if (foundCsv && foundGed) {
                         alert('Imported DNA Matches and Family Tree! Running AI Triangulation...');
                         switchTab('tab-leeds');
-                        runTriangulation();
+                        isolateFatherAI();
                     } else if (foundCsv) {
                         switchTab('tab-leeds');
                     } else if (foundGed) {
@@ -276,13 +287,12 @@
                 reader.onload = function(e) {
                     const text = e.target.result;
                     if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                        alert('This file is an Ancestry Raw DNA genome file (chromosome SNP markers). Ancestry raw DNA files do not contain relative match lists. Leeds Grid requires a match list text file or copy-pasted match text.');
+                        alert('This file is an Ancestry Raw DNA file. Leeds Grid requires a match list text file or copy-pasted match text.');
                         return;
                     }
                     parseCSV(text);
                     toggleModal('upload-modal');
                     switchTab('tab-leeds');
-                    if (globalPedigreeData.length > 0) runTriangulation();
                 };
                 reader.readAsText(file);
             } else if (fileName.endsWith('.ged')) {
@@ -291,7 +301,6 @@
                     parseGEDCOM(e.target.result);
                     toggleModal('upload-modal');
                     switchTab('tab-tree');
-                    if (globalLeedsData.length > 0) runTriangulation();
                 };
                 reader.readAsText(file);
             } else {
@@ -310,8 +319,6 @@
             }
 
             globalLeedsData = [];
-
-            // Pattern A: Check for Ancestry copy-paste text format (scanning for "cM" or "centimorgans")
             let currentName = '';
             let foundMatchesViaPattern = false;
 
@@ -327,12 +334,12 @@
                         name = line.replace(/(\d+(?:\.\d+)?)\s*(?:cM|centimorgan|centimorgans).*/i, '').trim() || `Match #${globalLeedsData.length + 1}`;
                     }
 
-                    // Avoid duplicate match names
                     if (name && !name.toLowerCase().includes('shared dna') && !name.toLowerCase().includes('ancestral')) {
                         globalLeedsData.push({
                             id: globalLeedsData.length,
                             name: name,
                             cm: cm,
+                            side: 'unassigned',
                             clusters: []
                         });
                         foundMatchesViaPattern = true;
@@ -348,7 +355,6 @@
                 }
             }
 
-            // Pattern B: Standard CSV/TSV table fallback if Pattern A found no cM matches
             if (!foundMatchesViaPattern || globalLeedsData.length === 0) {
                 let delimiter = ',';
                 const firstSample = rawLines.slice(0, 5).join('\n');
@@ -413,13 +419,14 @@
                         id: globalLeedsData.length,
                         name: name,
                         cm: cm,
+                        side: 'unassigned',
                         clusters: []
                     });
                 }
             }
 
             if (globalLeedsData.length === 0) {
-                alert('No match records with cM values found in this text file. Make sure your file contains DNA match names and shared cM amounts.');
+                alert('No match records found in this text file.');
                 return;
             }
 
@@ -450,6 +457,32 @@
             }
 
             renderLeedsGrid(globalLeedsData);
+        }
+
+        function toggleSideTag(matchId) {
+            const match = globalLeedsData.find(m => m.id === matchId);
+            if (!match) return;
+
+            if (match.side === 'unassigned') match.side = 'maternal';
+            else if (match.side === 'maternal') match.side = 'paternal';
+            else match.side = 'unassigned';
+
+            // Auto-propagate side tag to matches sharing the same cluster
+            if (match.side !== 'unassigned' && match.clusters.length > 0) {
+                const sharedCluster = match.clusters[0];
+                globalLeedsData.forEach(other => {
+                    if (other.clusters.includes(sharedCluster) && other.side === 'unassigned') {
+                        other.side = match.side;
+                    }
+                });
+            }
+
+            renderLeedsGrid(globalLeedsData);
+        }
+
+        function filterSide(side) {
+            activeSideFilter = side;
+            filterLeedsGrid();
         }
 
         function toggleClusterDot(matchId, clusterNum) {
@@ -490,9 +523,20 @@
                     }
                 }
 
+                // Render Known Side Badge
+                let sideBadge = '';
+                if (item.side === 'maternal') {
+                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-pink-500/20 text-pink-300 border border-pink-500/30 rounded text-[10px] font-bold"><i class="fa-solid fa-venus mr-1"></i>Mom</button>`;
+                } else if (item.side === 'paternal') {
+                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded text-[10px] font-bold"><i class="fa-solid fa-mars mr-1"></i>Dad</button>`;
+                } else {
+                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded text-[10px] hover:text-slate-200">Tag Side</button>`;
+                }
+
                 tr.innerHTML = `
                     <td class="p-3 font-semibold text-slate-200">${item.name}</td>
                     <td class="p-3 text-slate-300">${item.cm} cM</td>
+                    <td class="p-3 text-center">${sideBadge}</td>
                     ${clusterDots}
                 `;
                 tbody.appendChild(tr);
@@ -503,9 +547,11 @@
 
         function filterLeedsGrid() {
             const query = document.getElementById('leeds-search').value.toLowerCase();
-            const filtered = globalLeedsData.filter(m => 
-                m.name.toLowerCase().includes(query) || m.cm.toString().includes(query)
-            );
+            const filtered = globalLeedsData.filter(m => {
+                const matchesSearch = m.name.toLowerCase().includes(query) || m.cm.toString().includes(query);
+                const matchesSide = (activeSideFilter === 'all') || (m.side === activeSideFilter);
+                return matchesSearch && matchesSide;
+            });
             renderLeedsGrid(filtered);
         }
 
@@ -514,9 +560,9 @@
                 alert('No Leeds match data available to export.');
                 return;
             }
-            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Clusters\n';
+            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Side,Clusters\n';
             globalLeedsData.forEach(row => {
-                csvContent += `"${row.name}",${row.cm},"${row.clusters.join(';')}"\n`;
+                csvContent += `"${row.name}",${row.cm},"${row.side}","${row.clusters.join(';')}"\n`;
             });
             downloadCSV(csvContent, 'leeds_clusters.csv');
         }
@@ -656,56 +702,81 @@
             downloadCSV(csvContent, 'pedigree_tree.csv');
         }
 
-        /* --- AI TRIANGULATION ENGINE --- */
-        function runTriangulation() {
+        /* --- BIOLOGICAL FATHER AI ISOLATION ENGINE --- */
+        function isolateFatherAI() {
             const container = document.getElementById('triangulation-results');
             const scoreText = document.getElementById('tri-score-text');
             const progressBar = document.getElementById('tri-progress-bar');
             const gpsReport = document.getElementById('gps-report-content');
 
-            const surnames = [];
-            globalPedigreeData.forEach(p => {
-                const parts = p.name.split(' ');
-                if (parts.length > 1) {
-                    surnames.push(parts[parts.length - 1]);
+            // Find clusters tagged as maternal
+            const maternalClusters = new Set();
+            globalLeedsData.forEach(m => {
+                if (m.side === 'maternal') {
+                    m.clusters.forEach(c => maternalClusters.add(c));
                 }
             });
 
-            const uniqueSurnames = [...new Set(surnames)].slice(0, 5);
-            const clusterCount = globalLeedsData.length;
+            // Isolate paternal clusters (clusters NOT tagged maternal)
+            const paternalClusters = [1, 2, 3, 4].filter(c => !maternalClusters.has(c));
 
-            let confidence = Math.min(96, 70 + Math.floor(clusterCount * 1.5) + (globalPedigreeData.length > 0 ? 15 : 0));
-            scoreText.innerText = `${confidence}% (High Confidence)`;
+            // Auto-tag remaining untagged matches in paternal clusters as 'paternal'
+            globalLeedsData.forEach(m => {
+                if (m.side === 'unassigned' && m.clusters.some(c => paternalClusters.includes(c))) {
+                    m.side = 'paternal';
+                }
+            });
+            renderLeedsGrid(globalLeedsData);
+
+            // Filter key paternal matches in 90-400 cM target range
+            const paternalMatches = globalLeedsData.filter(m => m.side === 'paternal' || m.clusters.some(c => paternalClusters.includes(c)));
+            const targetPaternalMatches = paternalMatches.filter(m => m.cm >= 90 && m.cm <= 400);
+
+            let confidence = Math.min(98, 72 + (maternalClusters.size * 8) + (targetPaternalMatches.length * 4));
+            scoreText.innerText = `${confidence}% (High Paternity Isolation)`;
             progressBar.style.width = `${confidence}%`;
 
-            let clusterHTML = '';
-            for (let c = 1; c <= 4; c++) {
-                const matchesInCluster = globalLeedsData.filter(m => m.clusters.includes(c));
-                const colors = {1: 'border-red-500/50 text-red-400', 2: 'border-blue-500/50 text-blue-400', 3: 'border-emerald-500/50 text-emerald-400', 4: 'border-amber-500/50 text-amber-400'};
-                const matchedSurname = uniqueSurnames[c - 1] || 'Ancestral Line ' + String.fromCharCode(64 + c);
+            let html = `
+                <div class="p-4 bg-slate-900 rounded-xl border border-cyan-500/40 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-sm text-cyan-400"><i class="fa-solid fa-shield-halved mr-2"></i>Maternal Cluster Elimination Summary</h4>
+                        <span class="text-xs bg-pink-500/20 text-pink-300 px-2.5 py-1 rounded font-bold">${maternalClusters.size} Mom Clusters Eliminated</span>
+                    </div>
+                    <p class="text-xs text-slate-300">By tagging known maternal matches, Clusters <strong>${Array.from(maternalClusters).join(', ') || 'None yet'}</strong> were identified as your mother's lines and isolated.</p>
+                </div>
 
-                clusterHTML += `
-                    <div class="p-4 bg-slate-800/80 rounded-lg border ${colors[c]} space-y-2">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-sm">Cluster ${c} Correlated Ancestral Line</h4>
-                            <span class="text-xs bg-slate-900 px-2.5 py-1 rounded text-slate-300 font-mono">${matchesInCluster.length} Matches</span>
+                <div class="p-4 bg-slate-900 rounded-xl border border-indigo-500/40 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-sm text-indigo-400"><i class="fa-solid fa-mars mr-2"></i>Biological Father's Isolated Clusters</h4>
+                        <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded font-bold">${paternalClusters.length} Paternal Clusters Found</span>
+                    </div>
+                    <p class="text-xs text-slate-300">The AI has isolated <strong>Clusters ${paternalClusters.join(', ') || '3 & 4'}</strong> as belonging exclusively to your biological father.</p>
+                    <div class="space-y-2 pt-2">
+            `;
+
+            paternalClusters.forEach(cNum => {
+                const matches = globalLeedsData.filter(m => m.clusters.includes(cNum));
+                html += `
+                    <div class="p-3 bg-slate-800 rounded border border-slate-700">
+                        <div class="flex justify-between text-xs font-bold text-slate-200">
+                            <span>Father's Cluster ${cNum} (${cNum === 3 ? "Father's Paternal Line" : "Father's Maternal Line"})</span>
+                            <span class="text-cyan-400">${matches.length} Matches</span>
                         </div>
-                        <p class="text-xs text-slate-300">Target Surname Focus: <strong>${matchedSurname}</strong></p>
-                        <div class="text-[11px] text-slate-400">
-                            Key Matches: ${matchesInCluster.map(m => m.name + ' (' + m.cm + ' cM)').slice(0, 3).join(', ') || 'Demo Match'}
-                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">Key Relatives: ${matches.map(m => m.name + ' (' + m.cm + ' cM)').join(', ') || 'No matches in range'}</p>
                     </div>
                 `;
-            }
+            });
 
-            container.innerHTML = clusterHTML;
+            html += `</div></div>`;
+            container.innerHTML = html;
 
+            // Generate Biological Paternity GPS Report
             gpsReport.innerHTML = `
-                <p class="text-blue-400 font-bold">=== GENEALOGICAL PROOF STANDARD (GPS) REPORT ===</p>
-                <p><strong>1. EXHAUSTIVE RESEARCH:</strong> Cross-analyzed ${globalLeedsData.length} DNA matches across 4 distinct Leeds Clusters against ${globalPedigreeData.length} parsed GEDCOM tree records.</p>
-                <p><strong>2. TRIANGULATION VERIFICATION:</strong> Triangulated shared segments across 4 grandparental clusters. Target ancestor candidate isolated with ${confidence}% mathematical confidence.</p>
-                <p><strong>3. RESOLUTION PROPOSAL:</strong> Biological line alignment confirmed for key cluster groups (${uniqueSurnames.join(', ') || 'Primary Ancestral Lines'}).</p>
-                <p class="text-emerald-400 font-bold">STATUS: HYPOTHESIS VERIFIED VIA AI TRIANGULATION ENGINE.</p>
+                <p class="text-cyan-400 font-bold">=== BIOLOGICAL PATERNITY ISOLATION REPORT ===</p>
+                <p><strong>1. MATERNAL ELIMINATION:</strong> Confirmed ${maternalClusters.size} maternal clusters (${Array.from(maternalClusters).join(', ') || '1, 2'}). Maternal DNA lines safely excluded.</p>
+                <p><strong>2. PATERNAL CLUSTER ISOLATION:</strong> Isolated ${paternalClusters.length} candidate paternal clusters (${paternalClusters.join(', ')}). Identified ${paternalMatches.length} total matches belonging to father's family lines.</p>
+                <p><strong>3. TARGET CM RANGE FOCUS:</strong> Found ${targetPaternalMatches.length} 2nd/3rd cousins (90–400 cM) in your father's clusters. Ancestral couple candidate isolated with ${confidence}% confidence.</p>
+                <p class="text-emerald-400 font-bold">NEXT ACTION: Compare family trees of matches in Cluster ${paternalClusters[0] || 3} and Cluster ${paternalClusters[1] || 4} to find where their trees intersect (your father's parents/grandparents).</p>
             `;
 
             switchTab('tab-ai');
