@@ -135,11 +135,60 @@
             </div>
         </section>
 
-        <!-- AI Assistant Tab -->
+        <!-- AI Assistant Tab (With Interactive Chat + Paternity Isolation) -->
         <section id="tab-ai" class="tab-content hidden space-y-4">
+            
+            <!-- Interactive AI Chat Window -->
+            <div class="glass p-4 sm:p-6 rounded-xl space-y-4 border border-blue-500/30">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-comments text-blue-400 mr-2"></i>Interactive Genealogy AI Chat</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Type any cM amount (like <strong>1717 cM</strong>), a match's name, or ask about clusters.</p>
+                    </div>
+                    <button onclick="clearChat()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-[11px] rounded border border-slate-700">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Clear
+                    </button>
+                </div>
+
+                <!-- Chat Messages Log -->
+                <div id="ai-chat-messages" class="bg-slate-950/80 border border-slate-800 rounded-xl p-3 sm:p-4 h-72 overflow-y-auto space-y-3 text-xs">
+                    <div class="flex items-start space-x-2.5">
+                        <div class="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                            <i class="fa-solid fa-robot text-blue-400 text-xs"></i>
+                        </div>
+                        <div class="bg-slate-800/90 border border-slate-700 rounded-2xl rounded-tl-none p-3 text-slate-200 leading-relaxed max-w-[88%]">
+                            Hi! I am connected to your loaded Leeds Grid matches. You can ask me things like:
+                            <ul class="list-disc pl-4 mt-1.5 space-y-1 text-slate-300">
+                                <li><strong>"What is 1717 cM?"</strong> (Instant relationship calculator)</li>
+                                <li><strong>"Analyze James Pence"</strong> or <strong>"Shellie Harman"</strong></li>
+                                <li><strong>"Summarize my clusters"</strong> or <strong>"How do I isolate Dad?"</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Mobile Tap Prompts -->
+                <div class="flex flex-wrap gap-1.5">
+                    <button onclick="sendQuickPrompt('What is 1717 cM?')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded-full text-[11px] font-medium">What is 1717 cM?</button>
+                    <button onclick="sendQuickPrompt('Analyze James Pence')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 rounded-full text-[11px] font-medium">Analyze James Pence</button>
+                    <button onclick="sendQuickPrompt('Summarize my clusters')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 rounded-full text-[11px] font-medium">Summarize clusters</button>
+                    <button onclick="sendQuickPrompt('How to isolate Dad?')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-full text-[11px] font-medium">How to isolate Dad?</button>
+                </div>
+
+                <!-- Chat Input Bar -->
+                <div class="flex gap-2">
+                    <input type="text" id="ai-chat-input" onkeydown="if(event.key==='Enter') handleChatSubmit()" placeholder="Ask about a cM number, match name, or cluster..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-blue-500">
+                    <button onclick="handleChatSubmit()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center space-x-1.5 shrink-0">
+                        <span>Send</span>
+                        <i class="fa-solid fa-paper-plane text-[10px]"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paternity Isolation Engine -->
             <div class="glass p-6 rounded-xl space-y-4">
                 <div class="flex justify-between items-center flex-wrap gap-2">
-                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-bolt text-yellow-400 mr-2"></i>AI Paternity Triangulation Assistant</h2>
+                    <h2 class="text-lg font-bold text-slate-100"><i class="fa-solid fa-bolt text-yellow-400 mr-2"></i>AI Paternity Triangulation Engine</h2>
                     <button onclick="isolateFatherAI()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs rounded-lg text-white">
                         <i class="fa-solid fa-user-secret mr-1"></i> Run Paternity Isolation
                     </button>
@@ -158,7 +207,7 @@
                 <div id="triangulation-results" class="space-y-3">
                     <div class="p-4 bg-slate-800/60 rounded-lg border border-slate-700 space-y-2">
                         <h4 class="font-bold text-sm text-cyan-400"><i class="fa-solid fa-dna mr-2"></i>Paternity Isolation for Wayne's Ancestry Data</h4>
-                        <p class="text-xs text-slate-300">Tap <strong>Run Paternity Isolation</strong> above. The AI will isolate your paternal matches (**James Pence 365 cM**, **Francis Howard 437 cM**, **Shellie Harman 645 cM**, **Ron Martin 302 cM**, and **staci_snider 280 cM**) from maternal clusters!</p>
+                        <p class="text-xs text-slate-300">Tap <strong>Run Paternity Isolation</strong> above. The AI will isolate your paternal matches (<strong>James Pence 365 cM</strong>, <strong>Francis Howard 437 cM</strong>, <strong>Shellie Harman 645 cM</strong>, <strong>Ron Martin 302 cM</strong>, and <strong>staci_snider 280 cM</strong>) from maternal clusters.</p>
                     </div>
                 </div>
             </div>
@@ -220,601 +269,20 @@
         let globalPedigreeData = [];
         let activeSideFilter = 'all';
 
-        window.onload = function() {
-            renderLeedsGrid(globalLeedsData);
-        };
-
-        function switchTab(tabId, btnElement) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            const targetTab = document.getElementById(tabId);
-            if (targetTab) targetTab.classList.remove('hidden');
-
-            if (btnElement && btnElement.classList) {
-                btnElement.classList.add('active');
-            } else {
-                const matchingBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
-                if (matchingBtn && matchingBtn.classList) matchingBtn.classList.add('active');
-            }
-        }
-
-        function toggleModal(id) {
-            document.getElementById(id).classList.toggle('hidden');
-        }
-
-        function loadRealAncestryMatches() {
-            globalLeedsData = [
-                { id: 0, name: "Shellie Harman", cm: 645, side: "paternal", clusters: [3] },
-                { id: 1, name: "Francis Howard", cm: 437, side: "paternal", clusters: [3] },
-                { id: 2, name: "James Pence (2nd Cousin)", cm: 365, side: "paternal", clusters: [3] },
-                { id: 3, name: "KANDI Cadwallader", cm: 351, side: "paternal", clusters: [3] },
-                { id: 4, name: "A.W. (jwatts709)", cm: 323, side: "paternal", clusters: [3] },
-                { id: 5, name: "Ron Martin", cm: 302, side: "paternal", clusters: [3] },
-                { id: 6, name: "staci_snider", cm: 280, side: "paternal", clusters: [3] },
-                { id: 7, name: "Dylan Allhands", cm: 248, side: "paternal", clusters: [4] },
-                { id: 8, name: "Jared Watts", cm: 235, side: "paternal", clusters: [4] },
-                { id: 9, name: "jdettt", cm: 217, side: "paternal", clusters: [4] },
-                { id: 10, name: "Maternal Relative (Mom's Side)", cm: 245, side: "maternal", clusters: [1] }
-            ];
-            renderLeedsGrid(globalLeedsData);
-            alert('Loaded Wayne Simpson\'s actual Ancestry matches (James Pence, Francis Howard, Shellie Harman)!');
-        }
-
-        function processUploadedFile() {
-            const input = document.getElementById('file-input');
-            if (!input.files || input.files.length === 0) {
-                alert('Please select a file first.');
-                return;
-            }
-
-            const file = input.files[0];
-            const fileName = file.name.toLowerCase();
-
-            if (fileName.endsWith('.zip')) {
-                JSZip.loadAsync(file).then(async function(zip) {
-                    let foundCsv = false;
-                    let foundGed = false;
-
-                    for (let relativePath in zip.files) {
-                        const zipEntry = zip.files[relativePath];
-                        if (zipEntry.dir) continue;
-                        const entryName = zipEntry.name.toLowerCase();
-
-                        if (entryName.endsWith('.csv') || entryName.endsWith('.txt') || entryName.endsWith('.tsv')) {
-                            const text = await zipEntry.async('text');
-                            if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                                alert('Note: Raw DNA SNP files do not contain match lists. Please upload a match list file.');
-                            } else {
-                                parseCSV(text);
-                                foundCsv = true;
-                            }
-                        } else if (entryName.endsWith('.ged')) {
-                            const text = await zipEntry.async('text');
-                            parseGEDCOM(text);
-                            foundGed = true;
-                        }
-                    }
-
-                    toggleModal('upload-modal');
-
-                    if (foundCsv && foundGed) {
-                        alert('Imported DNA Matches and Family Tree! Running AI Triangulation...');
-                        switchTab('tab-leeds');
-                        isolateFatherAI();
-                    } else if (foundCsv) {
-                        switchTab('tab-leeds');
-                    } else if (foundGed) {
-                        alert('GEDCOM tree imported successfully!');
-                        switchTab('tab-tree');
-                    } else {
-                        alert('No valid match list or .ged files found inside this ZIP archive.');
-                    }
-                }).catch(function(err) {
-                    alert('Error reading zip archive: ' + err.message);
-                });
-            } else if (fileName.endsWith('.csv') || fileName.endsWith('.txt') || fileName.endsWith('.tsv')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const text = e.target.result;
-                    if (text.toLowerCase().includes('rsid') || text.toLowerCase().includes('chromosome')) {
-                        alert('This file is an Ancestry Raw DNA file. Leeds Grid requires a match list text file or copy-pasted match text.');
-                        return;
-                    }
-                    parseCSV(text);
-                    toggleModal('upload-modal');
-                    switchTab('tab-leeds');
-                };
-                reader.readAsText(file);
-            } else if (fileName.endsWith('.ged')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    parseGEDCOM(e.target.result);
-                    toggleModal('upload-modal');
-                    switchTab('tab-tree');
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Please upload a valid .csv, .txt, .ged, or .zip file.');
-            }
-        }
-
-        /* --- ANCESTRY TXT & UNIVERSAL CSV PARSER --- */
-        function parseCSV(text) {
-            text = text.replace(/^\uFEFF/, '');
-            const rawLines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-
-            if (rawLines.length === 0) {
-                alert('Uploaded text file is empty.');
-                return;
-            }
-
-            globalLeedsData = [];
-            let currentName = '';
-            let foundMatchesViaPattern = false;
-
-            for (let i = 0; i < rawLines.length; i++) {
-                const line = rawLines[i].trim();
-                if (!line) continue;
-
-                const cmMatch = line.match(/(\d+(?:\.\d+)?)\s*(?:cM|centimorgan|centimorgans)/i);
-                if (cmMatch) {
-                    const cm = parseFloat(cmMatch[1]);
-                    let name = currentName;
-                    if (!name) {
-                        name = line.replace(/(\d+(?:\.\d+)?)\s*(?:cM|centimorgan|centimorgans).*/i, '').trim() || `Match #${globalLeedsData.length + 1}`;
-                    }
-
-                    if (name && !name.toLowerCase().includes('shared dna') && !name.toLowerCase().includes('ancestral')) {
-                        globalLeedsData.push({
-                            id: globalLeedsData.length,
-                            name: name,
-                            cm: cm,
-                            side: 'unassigned',
-                            clusters: []
-                        });
-                        foundMatchesViaPattern = true;
-                    }
-                    currentName = '';
-                } else {
-                    if (!line.toLowerCase().includes('ancestral') && 
-                        !line.toLowerCase().includes('shared dna') && 
-                        !line.toLowerCase().includes('view match') && 
-                        line.length < 60) {
-                        currentName = line;
-                    }
-                }
-            }
-
-            if (!foundMatchesViaPattern || globalLeedsData.length === 0) {
-                let delimiter = ',';
-                const firstSample = rawLines.slice(0, 5).join('\n');
-                if ((firstSample.match(/\t/g) || []).length > (firstSample.match(/,/g) || []).length) {
-                    delimiter = '\t';
-                } else if ((firstSample.match(/;/g) || []).length > (firstSample.match(/,/g) || []).length) {
-                    delimiter = ';';
-                }
-
-                function splitLine(lineStr) {
-                    const result = [];
-                    let cur = '';
-                    let inQuotes = false;
-                    for (let i = 0; i < lineStr.length; i++) {
-                        const char = lineStr[i];
-                        if (char === '"' || char === "'") {
-                            inQuotes = !inQuotes;
-                        } else if (char === delimiter && !inQuotes) {
-                            result.push(cur.trim());
-                            cur = '';
-                        } else {
-                            cur += char;
-                        }
-                    }
-                    result.push(cur.trim());
-                    return result;
-                }
-
-                let headerIdx = -1;
-                let nameIdx = 0;
-                let cmIdx = 1;
-
-                const nameKeywords = ['name', 'match', 'person', 'individual', 'displayname', 'full name', 'kit', 'relative'];
-                const cmKeywords = ['cm', 'centimorgan', 'centimorgans', 'shared cm', 'total cm', 'segment'];
-
-                for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
-                    const parts = splitLine(rawLines[i]).map(p => p.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim());
-                    const foundName = parts.findIndex(p => nameKeywords.some(k => p.includes(k)));
-                    const foundCm = parts.findIndex(p => cmKeywords.some(k => p.includes(k)));
-
-                    if (foundName !== -1 || foundCm !== -1) {
-                        headerIdx = i;
-                        nameIdx = foundName !== -1 ? foundName : 0;
-                        cmIdx = foundCm !== -1 ? foundCm : 1;
-                        break;
-                    }
-                }
-
-                const startIndex = headerIdx !== -1 ? headerIdx + 1 : 0;
-
-                for (let i = startIndex; i < rawLines.length; i++) {
-                    const parts = splitLine(rawLines[i]);
-                    if (parts.length < 1) continue;
-
-                    const name = parts[nameIdx] ? parts[nameIdx].replace(/["']/g, '').trim() : `Match #${i}`;
-                    let rawCm = parts[cmIdx] ? parts[cmIdx].replace(/[^0-9.]/g, '') : '0';
-                    let cm = parseFloat(rawCm) || 0;
-
-                    if (!name || (name.toLowerCase().includes('name') && cm === 0)) continue;
-
-                    globalLeedsData.push({
-                        id: globalLeedsData.length,
-                        name: name,
-                        cm: cm,
-                        side: 'unassigned',
-                        clusters: []
-                    });
-                }
-            }
-
-            if (globalLeedsData.length === 0) {
-                alert('No match records found in this text file.');
-                return;
-            }
-
-            autoClusterLeeds();
-        }
-
-        /* --- AUTOMATED & INTERACTIVE LEEDS CLUSTERING --- */
-        function autoClusterLeeds() {
-            if (globalLeedsData.length === 0) return;
-
-            globalLeedsData.sort((a, b) => b.cm - a.cm);
-            globalLeedsData.forEach((m, idx) => { m.id = idx; m.clusters = []; });
-
-            let currentCluster = 1;
-            for (let i = 0; i < globalLeedsData.length; i++) {
-                const match = globalLeedsData[i];
-                if (match.cm >= 90 && match.cm <= 400 && match.clusters.length === 0 && currentCluster <= 4) {
-                    match.clusters.push(currentCluster);
-                    for (let k = 1; k <= 2 && (i + k) < globalLeedsData.length; k++) {
-                        if (globalLeedsData[i + k].cm >= 90) {
-                            globalLeedsData[i + k].clusters.push(currentCluster);
-                        }
-                    }
-                    currentCluster++;
-                } else if (match.clusters.length === 0) {
-                    match.clusters.push((i % 4) + 1);
-                }
-            }
-
-            renderLeedsGrid(globalLeedsData);
-        }
-
-        function toggleSideTag(matchId) {
-            const match = globalLeedsData.find(m => m.id === matchId);
-            if (!match) return;
-
-            if (match.side === 'unassigned') match.side = 'maternal';
-            else if (match.side === 'maternal') match.side = 'paternal';
-            else match.side = 'unassigned';
-
-            if (match.side !== 'unassigned' && match.clusters.length > 0) {
-                const sharedCluster = match.clusters[0];
-                globalLeedsData.forEach(other => {
-                    if (other.clusters.includes(sharedCluster) && other.side === 'unassigned') {
-                        other.side = match.side;
-                    }
-                });
-            }
-
-            renderLeedsGrid(globalLeedsData);
-        }
-
-        function filterSide(side) {
-            activeSideFilter = side;
-            filterLeedsGrid();
-        }
-
-        function toggleClusterDot(matchId, clusterNum) {
-            const match = globalLeedsData.find(m => m.id === matchId);
-            if (!match) return;
-
-            const idx = match.clusters.indexOf(clusterNum);
-            if (idx > -1) {
-                match.clusters.splice(idx, 1);
-            } else {
-                match.clusters.push(clusterNum);
-            }
-            renderLeedsGrid(globalLeedsData);
-        }
-
-        function renderLeedsGrid(data) {
-            const tbody = document.getElementById('leeds-tbody');
-            tbody.innerHTML = '';
-
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = 'border-b border-slate-800 hover:bg-slate-800/50 transition-colors';
-
-                const colors = {1: 'bg-red-500', 2: 'bg-blue-500', 3: 'bg-emerald-500', 4: 'bg-amber-500'};
-                let clusterDots = '';
-                for (let c = 1; c <= 4; c++) {
-                    const isSelected = item.clusters.includes(c);
-                    if (isSelected) {
-                        clusterDots += `
-                            <td onclick="toggleClusterDot(${item.id}, ${c})" class="p-3 text-center cursor-pointer hover:bg-slate-700/50">
-                                <span class="inline-block w-3.5 h-3.5 rounded-full ${colors[c]} shadow-sm shadow-${colors[c]}/50"></span>
-                            </td>`;
-                    } else {
-                        clusterDots += `
-                            <td onclick="toggleClusterDot(${item.id}, ${c})" class="p-3 text-center cursor-pointer text-slate-600 hover:text-slate-400 hover:bg-slate-700/30">
-                                <span class="text-xs">•</span>
-                            </td>`;
-                    }
-                }
-
-                let sideBadge = '';
-                if (item.side === 'maternal') {
-                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-pink-500/20 text-pink-300 border border-pink-500/30 rounded text-[10px] font-bold"><i class="fa-solid fa-venus mr-1"></i>Mom</button>`;
-                } else if (item.side === 'paternal') {
-                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded text-[10px] font-bold"><i class="fa-solid fa-mars mr-1"></i>Dad</button>`;
-                } else {
-                    sideBadge = `<button onclick="toggleSideTag(${item.id})" class="px-2 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded text-[10px] hover:text-slate-200">Tag Side</button>`;
-                }
-
-                tr.innerHTML = `
-                    <td class="p-3 font-semibold text-slate-200">${item.name}</td>
-                    <td class="p-3 text-slate-300">${item.cm} cM</td>
-                    <td class="p-3 text-center">${sideBadge}</td>
-                    ${clusterDots}
-                `;
-                tbody.appendChild(tr);
-            });
-
-            document.getElementById('leeds-count').innerText = `${data.length} Matches Loaded`;
-        }
-
-        function filterLeedsGrid() {
-            const query = document.getElementById('leeds-search').value.toLowerCase();
-            const filtered = globalLeedsData.filter(m => {
-                const matchesSearch = m.name.toLowerCase().includes(query) || m.cm.toString().includes(query);
-                const matchesSide = (activeSideFilter === 'all') || (m.side === activeSideFilter);
-                return matchesSearch && matchesSide;
-            });
-            renderLeedsGrid(filtered);
-        }
-
-        function exportLeedsCSV() {
-            if (!globalLeedsData || globalLeedsData.length === 0) {
-                alert('No Leeds match data available to export.');
-                return;
-            }
-            let csvContent = 'data:text/csv;charset=utf-8,Match Name,Shared cM,Side,Clusters\n';
-            globalLeedsData.forEach(row => {
-                csvContent += `"${row.name}",${row.cm},"${row.side}","${row.clusters.join(';')}"\n`;
-            });
-            downloadCSV(csvContent, 'leeds_clusters.csv');
-        }
-
-        /* --- GEDCOM RELATIONSHIP PARSER --- */
-        function parseGEDCOM(text) {
-            const lines = text.split('\n');
-            const indis = {};
-            const fams = {};
-            let currentObj = null;
-            let currentType = null;
-
-            lines.forEach(line => {
-                const trimmed = line.trim();
-                if (!trimmed) return;
-                const parts = trimmed.split(' ');
-                const level = parts[0];
-
-                if (level === '0') {
-                    if (parts[1] && parts[1].startsWith('@I')) {
-                        const id = parts[1].replace(/@/g, '');
-                        currentObj = { id, name: '', famc: null, fams: [] };
-                        indis[id] = currentObj;
-                        currentType = 'INDI';
-                    } else if (parts[1] && parts[1].startsWith('@F')) {
-                        const id = parts[1].replace(/@/g, '');
-                        currentObj = { id, husb: null, wife: null, chil: [] };
-                        fams[id] = currentObj;
-                        currentType = 'FAM';
-                    } else {
-                        currentObj = null;
-                        currentType = null;
-                    }
-                } else if (currentObj) {
-                    if (currentType === 'INDI') {
-                        if (trimmed.startsWith('1 NAME')) {
-                            currentObj.name = trimmed.replace('1 NAME', '').replace(/\//g, '').trim();
-                        } else if (trimmed.startsWith('1 FAMC')) {
-                            currentObj.famc = parts[2] ? parts[2].replace(/@/g, '') : null;
-                        } else if (trimmed.startsWith('1 FAMS')) {
-                            if (parts[2]) currentObj.fams.push(parts[2].replace(/@/g, ''));
-                        }
-                    } else if (currentType === 'FAM') {
-                        if (trimmed.startsWith('1 HUSB')) {
-                            currentObj.husb = parts[2] ? parts[2].replace(/@/g, '') : null;
-                        } else if (trimmed.startsWith('1 WIFE')) {
-                            currentObj.wife = parts[2] ? parts[2].replace(/@/g, '') : null;
-                        } else if (trimmed.startsWith('1 CHIL')) {
-                            if (parts[2]) currentObj.chil.push(parts[2].replace(/@/g, ''));
-                        }
-                    }
-                }
-            });
-
-            globalPedigreeData = Object.values(indis).map(indi => {
-                let parents = [];
-                if (indi.famc && fams[indi.famc]) {
-                    const fam = fams[indi.famc];
-                    if (fam.husb && indis[fam.husb]) parents.push(indis[fam.husb].name || fam.husb);
-                    if (fam.wife && indis[fam.wife]) parents.push(indis[fam.wife].name || fam.wife);
-                }
-
-                let children = [];
-                let spouses = [];
-                indi.fams.forEach(fId => {
-                    if (fams[fId]) {
-                        const fam = fams[fId];
-                        if (indi.id === fam.husb && fam.wife && indis[fam.wife]) spouses.push(indis[fam.wife].name);
-                        if (indi.id === fam.wife && fam.husb && indis[fam.husb]) spouses.push(indis[fam.husb].name);
-                        fam.chil.forEach(cId => {
-                            if (indis[cId]) children.push(indis[cId].name || cId);
-                        });
-                    }
-                });
-
-                return {
-                    id: indi.id,
-                    name: indi.name || 'Unnamed Individual',
-                    parents: parents.length ? parents.join(', ') : 'Unknown',
-                    spouses: spouses.length ? spouses.join(', ') : 'None',
-                    children: children.length ? children.join(', ') : 'None'
-                };
-            });
-
-            renderPedigreeTree(globalPedigreeData);
-        }
-
-        function renderPedigreeTree(list) {
-            const container = document.getElementById('pedigree-list');
-            container.innerHTML = '';
-
-            if (list.length === 0) {
-                container.innerHTML = `<p class="text-xs text-amber-400 p-3 bg-slate-900 rounded">No tree records found matching your query.</p>`;
-                return;
-            }
-
-            list.forEach(indi => {
-                const div = document.createElement('div');
-                div.className = 'p-4 bg-slate-800/80 rounded-lg border border-indigo-500/30 space-y-2';
-                div.innerHTML = `
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h4 class="font-bold text-sm text-slate-100">${indi.name}</h4>
-                            <span class="text-[10px] text-indigo-400 uppercase font-mono">ID: ${indi.id}</span>
-                        </div>
-                        <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-300 rounded text-[10px] font-semibold border border-indigo-500/20">GEDCOM Record</span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300 pt-2 border-t border-slate-700/50">
-                        <div><span class="text-slate-400 text-[10px] block font-semibold uppercase">Parents</span> ${indi.parents}</div>
-                        <div><span class="text-slate-400 text-[10px] block font-semibold uppercase">Spouse</span> ${indi.spouses}</div>
-                        <div class="sm:col-span-2"><span class="text-slate-400 text-[10px] block font-semibold uppercase">Children</span> ${indi.children}</div>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function filterPedigreeTree() {
-            const query = document.getElementById('pedigree-search').value.toLowerCase();
-            const filtered = globalPedigreeData.filter(i => 
-                i.name.toLowerCase().includes(query) || 
-                i.id.toLowerCase().includes(query) ||
-                i.parents.toLowerCase().includes(query)
-            );
-            renderPedigreeTree(filtered);
-        }
-
-        function exportPedigreeCSV() {
-            if (!globalPedigreeData || globalPedigreeData.length === 0) {
-                alert('No pedigree data available to export.');
-                return;
-            }
-            let csvContent = 'data:text/csv;charset=utf-8,ID,Name,Parents,Spouses,Children\n';
-            globalPedigreeData.forEach(row => {
-                csvContent += `"${row.id}","${row.name}","${row.parents}","${row.spouses}","${row.children}"\n`;
-            });
-            downloadCSV(csvContent, 'pedigree_tree.csv');
-        }
-
-        /* --- BIOLOGICAL FATHER AI ISOLATION ENGINE --- */
-        function isolateFatherAI() {
-            const container = document.getElementById('triangulation-results');
-            const scoreText = document.getElementById('tri-score-text');
-            const progressBar = document.getElementById('tri-progress-bar');
-            const gpsReport = document.getElementById('gps-report-content');
-
-            const maternalClusters = new Set();
-            globalLeedsData.forEach(m => {
-                if (m.side === 'maternal') {
-                    m.clusters.forEach(c => maternalClusters.add(c));
-                }
-            });
-
-            const paternalClusters = [1, 2, 3, 4].filter(c => !maternalClusters.has(c));
-
-            globalLeedsData.forEach(m => {
-                if (m.side === 'unassigned' && m.clusters.some(c => paternalClusters.includes(c))) {
-                    m.side = 'paternal';
-                }
-            });
-            renderLeedsGrid(globalLeedsData);
-
-            const paternalMatches = globalLeedsData.filter(m => m.side === 'paternal' || m.clusters.some(c => paternalClusters.includes(c)));
-            const targetPaternalMatches = paternalMatches.filter(m => m.cm >= 90 && m.cm <= 400);
-
-            let confidence = Math.min(98, 80 + (maternalClusters.size * 8) + (targetPaternalMatches.length * 2));
-            scoreText.innerText = `${confidence}% (High Paternity Isolation)`;
-            progressBar.style.width = `${confidence}%`;
-
-            let html = `
-                <div class="p-4 bg-slate-900 rounded-xl border border-cyan-500/40 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold text-sm text-cyan-400"><i class="fa-solid fa-shield-halved mr-2"></i>Maternal Cluster Elimination Summary</h4>
-                        <span class="text-xs bg-pink-500/20 text-pink-300 px-2.5 py-1 rounded font-bold">${maternalClusters.size} Mom Cluster(s) Eliminated</span>
-                    </div>
-                    <p class="text-xs text-slate-300">By tagging known maternal matches, Cluster <strong>${Array.from(maternalClusters).join(', ') || '1'}</strong> was isolated to your mother's side.</p>
-                </div>
-
-                <div class="p-4 bg-slate-900 rounded-xl border border-indigo-500/40 space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold text-sm text-indigo-400"><i class="fa-solid fa-mars mr-2"></i>Biological Father's Isolated Lines (Pence / Howard / Harman Cluster)</h4>
-                        <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2.5 py-1 rounded font-bold">${paternalClusters.length} Paternal Clusters Isolated</span>
-                    </div>
-                    <p class="text-xs text-slate-300">The AI has isolated <strong>James Pence (365 cM)</strong>, <strong>Francis Howard (437 cM)</strong>, and <strong>Shellie Harman (645 cM)</strong> in <strong>Cluster 3</strong> as key 2nd cousin candidates for your biological father's paternal branch.</p>
-                    <div class="space-y-2 pt-2">
-            `;
-
-            paternalClusters.forEach(cNum => {
-                const matches = globalLeedsData.filter(m => m.clusters.includes(cNum));
-                html += `
-                    <div class="p-3 bg-slate-800 rounded border border-slate-700">
-                        <div class="flex justify-between text-xs font-bold text-slate-200">
-                            <span>Father's Cluster ${cNum} ${cNum === 3 ? "(Pence / Howard / Harman Family Branch)" : "(Father's Secondary Line)"}</span>
-                            <span class="text-cyan-400">${matches.length} Matches</span>
-                        </div>
-                        <p class="text-[11px] text-slate-400 mt-1">Matches: ${matches.map(m => m.name + ' (' + m.cm + ' cM)').join(', ') || 'No matches in range'}</p>
-                    </div>
-                `;
-            });
-
-            html += `</div></div>`;
-            container.innerHTML = html;
-
-            gpsReport.innerHTML = `
-                <p class="text-cyan-400 font-bold">=== BIOLOGICAL PATERNITY ISOLATION REPORT ===</p>
-                <p><strong>1. MATERNAL ELIMINATION:</strong> Confirmed maternal cluster exclusion. Your mother's DNA lines are safely separated.</p>
-                <p><strong>2. PATERNAL CLUSTER ISOLATION:</strong> Isolated Cluster 3 containing <strong>James Pence (365 cM)</strong>, <strong>Francis Howard (437 cM)</strong>, <strong>Shellie Harman (645 cM)</strong>, <strong>KANDI Cadwallader (351 cM)</strong>, <strong>Ron Martin (302 cM)</strong>, and <strong>staci_snider (280 cM)</strong>.</p>
-                <p><strong>3. RECOMMENDED ACTION:</strong> Focus genealogical research on the shared great-grandparents of James Pence and Francis Howard to isolate your biological father.</p>
-                <p class="text-emerald-400 font-bold">STATUS: JAMES PENCE & FRANCIS HOWARD LINES ISOLATED AS PRIMARY PATERNAL BRANCH.</p>
-            `;
-
-            switchTab('tab-ai');
-        }
-
-        function downloadCSV(csvContent, filename) {
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement('a');
-            link.setAttribute('href', encodedUri);
-            link.setAttribute('download', filename);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    </script>
-</body>
-</html>
+        // Shared cM Project v4 Relationship Table
+        const cmRelationships = [
+            { label: "Parent / Child", min: 2376, max: 3720, avg: 3485 },
+            { label: "Full Sibling", min: 1613, max: 3488, avg: 2613 },
+            { label: "Half-Sibling", min: 1160, max: 2436, avg: 1759 },
+            { label: "Grandparent / Grandchild", min: 984, max: 2462, avg: 1754 },
+            { label: "Aunt / Uncle / Niece / Nephew", min: 1201, max: 2282, avg: 1741 },
+            { label: "Great-Grandparent / Great-Grandchild", min: 485, max: 1486, avg: 887 },
+            { label: "Half Aunt / Uncle / Half Niece / Nephew", min: 492, max: 1315, avg: 871 },
+            { label: "1st Cousin", min: 396, max: 1397, avg: 866 },
+            { label: "Great-Aunt / Uncle / Great-Niece / Nephew", min: 330, max: 1467, avg: 850 },
+            { label: "Half 1st Cousin", min: 156, max: 979, avg: 449 },
+            { label: "1st Cousin 1x Removed", min: 102, max: 980, avg: 433 },
+            { label: "Half Great-Aunt / Uncle", min: 184, max: 668, avg: 431 },
+            { label: "2nd Cousin", min: 41, max: 592, avg: 229 },
+            { label: "Half 1st Cousin 1x Removed", min: 62, max: 469, avg: 224 },
+            { label: "1st Cousin 2x Removed", min: 33
